@@ -1,0 +1,235 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// Структура узла бинарного дерева поиска
+typedef struct Node {
+    int data;
+    struct Node* left;
+    struct Node* right;
+} Node;
+
+// Создание нового узла
+Node* createNode(int value) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        printf("Ошибка выделения памяти!\n");
+        exit(1);
+    }
+
+    newNode->data = value;
+    newNode->left = NULL;
+    newNode->right = NULL;
+
+    return newNode;
+}
+
+// Вставка элемента в BST
+Node* insert(Node* root, int value) {
+    if (root == NULL) {
+        return createNode(value);
+    }
+
+    if (value < root->data) {
+        root->left = insert(root->left, value);
+    } else if (value > root->data) {
+        root->right = insert(root->right, value);
+    } else {
+        // Если элемент уже есть, не добавляем дубликат
+        printf("Элемент %d уже существует в дереве.\n", value);
+    }
+
+    return root;
+}
+
+// Поиск элемента в дереве
+Node* search(Node* root, int key) {
+    if (root == NULL || root->data == key) {
+        return root;
+    }
+
+    if (key < root->data) {
+        return search(root->left, key);
+    } else {
+        return search(root->right, key);
+    }
+}
+
+// Прямой обход (NLR)
+void preorder(Node* root) {
+    if (root != NULL) {
+        printf("%d ", root->data);
+        preorder(root->left);
+        preorder(root->right);
+    }
+}
+
+// Центрированный обход (LNR)
+void inorder(Node* root) {
+    if (root != NULL) {
+        inorder(root->left);
+        printf("%d ", root->data);
+        inorder(root->right);
+    }
+}
+
+// Обратный обход (LRN)
+void postorder(Node* root) {
+    if (root != NULL) {
+        postorder(root->left);
+        postorder(root->right);
+        printf("%d ", root->data);
+    }
+}
+
+// DFS — реализуем через inorder (LNR)
+void dfs(Node* root) {
+    if (root != NULL) {
+        dfs(root->left);
+        printf("%d ", root->data);
+        dfs(root->right);
+    }
+}
+
+// Структура очереди для BFS
+typedef struct QueueNode {
+    Node* treeNode;
+    struct QueueNode* next;
+} QueueNode;
+
+typedef struct Queue {
+    QueueNode* front;
+    QueueNode* rear;
+} Queue;
+
+// Создание пустой очереди
+Queue* createQueue() {
+    Queue* q = (Queue*)malloc(sizeof(Queue));
+    if (q == NULL) {
+        printf("Ошибка выделения памяти для очереди!\n");
+        exit(1);
+    }
+
+    q->front = NULL;
+    q->rear = NULL;
+    return q;
+}
+
+// Проверка, пуста ли очередь
+int isEmptyQueue(Queue* q) {
+    return q->front == NULL;
+}
+
+// Добавление в очередь
+void enqueue(Queue* q, Node* treeNode) {
+    QueueNode* newQNode = (QueueNode*)malloc(sizeof(QueueNode));
+    if (newQNode == NULL) {
+        printf("Ошибка выделения памяти для элемента очереди!\n");
+        exit(1);
+    }
+
+    newQNode->treeNode = treeNode;
+    newQNode->next = NULL;
+
+    if (q->rear == NULL) {
+        q->front = q->rear = newQNode;
+        return;
+    }
+
+    q->rear->next = newQNode;
+    q->rear = newQNode;
+}
+
+// Удаление из очереди
+Node* dequeue(Queue* q) {
+    if (isEmptyQueue(q)) {
+        return NULL;
+    }
+
+    QueueNode* temp = q->front;
+    Node* treeNode = temp->treeNode;
+
+    q->front = q->front->next;
+
+    if (q->front == NULL) {
+        q->rear = NULL;
+    }
+
+    free(temp);
+    return treeNode;
+}
+
+// Обход в ширину BFS
+void bfs(Node* root) {
+    if (root == NULL) {
+        return;
+    }
+
+    Queue* q = createQueue();
+    enqueue(q, root);
+
+    while (!isEmptyQueue(q)) {
+        Node* current = dequeue(q);
+        printf("%d ", current->data);
+
+        if (current->left != NULL) {
+            enqueue(q, current->left);
+        }
+
+        if (current->right != NULL) {
+            enqueue(q, current->right);
+        }
+    }
+
+    free(q);
+}
+
+// Освобождение памяти дерева
+void freeTree(Node* root) {
+    if (root != NULL) {
+        freeTree(root->left);
+        freeTree(root->right);
+        free(root);
+    }
+}
+
+int main() {
+    Node* root = NULL;
+    int n, value, key;
+
+    printf("Введите количество элементов дерева: ");
+    scanf("%d", &n);
+
+    for (int i = 0; i < n; i++) {
+        printf("Введите элемент %d: ", i + 1);
+scanf("%d", &value);
+        root = insert(root, value);
+    }
+
+    printf("\nПрямой обход (preorder, NLR): ");
+    preorder(root);
+
+    printf("\nЦентрированный обход (inorder, LNR): ");
+    inorder(root);
+
+    printf("\nОбратный обход (postorder, LRN): ");
+    postorder(root);
+
+    printf("\nDFS (в глубину): ");
+    dfs(root);
+
+    printf("\nBFS (в ширину): ");
+    bfs(root);
+
+    printf("\n\nВведите ключ для поиска: ");
+    scanf("%d", &key);
+
+    Node* found = search(root, key);
+    if (found != NULL) {
+        printf("Элемент %d найден в дереве.\n", key);
+    } else {
+        printf("Элемент %d не найден в дереве.\n", key);
+    }
+
+    freeTree(root);
+    return 0;
+}
