@@ -1,0 +1,434 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// Структура узла бинарного дерева поиска
+typedef struct Node {
+    int data;
+    struct Node* left;
+    struct Node* right;
+} Node;
+
+// Создание нового узла
+Node* createNode(int value) {
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL) {
+        printf("Ошибка выделения памяти!\n");
+        exit(1);
+    }
+
+    newNode->data = value;
+    newNode->left = NULL;
+    newNode->right = NULL;
+
+    return newNode;
+}
+
+// Вставка элемента в BST
+Node* insert(Node* root, int value) {
+    if (root == NULL) {
+        return createNode(value);
+    }
+
+    if (value < root->data) {
+        root->left = insert(root->left, value);
+    } else if (value > root->data) {
+        root->right = insert(root->right, value);
+    } else {
+        printf("Элемент %d уже существует в дереве.\n", value);
+    }
+
+    return root;
+}
+
+// Поиск элемента в дереве
+Node* search(Node* root, int key) {
+    if (root == NULL || root->data == key) {
+        return root;
+    }
+
+    if (key < root->data) {
+        return search(root->left, key);
+    } else {
+        return search(root->right, key);
+    }
+}
+
+// Поиск минимального элемента
+Node* findMin(Node* root) {
+    if (root == NULL) {
+        return NULL;
+    }
+
+    while (root->left != NULL) {
+        root = root->left;
+    }
+
+    return root;
+}
+
+// Поиск максимального элемента
+Node* findMax(Node* root) {
+    if (root == NULL) {
+        return NULL;
+    }
+
+    while (root->right != NULL) {
+        root = root->right;
+    }
+
+    return root;
+}
+
+// Вычисление высоты дерева
+int getHeight(Node* root) {
+    if (root == NULL) {
+        return 0;
+    }
+
+    int leftHeight = getHeight(root->left);
+    int rightHeight = getHeight(root->right);
+
+    return (leftHeight > rightHeight ? leftHeight : rightHeight) + 1;
+}
+
+// Удаление узла из BST
+Node* deleteNode(Node* root, int key) {
+    if (root == NULL) {
+        return NULL;
+    }
+
+    if (key < root->data) {
+        root->left = deleteNode(root->left, key);
+    } else if (key > root->data) {
+        root->right = deleteNode(root->right, key);
+    } else {
+        // Случай 1: узел без потомков
+        if (root->left == NULL && root->right == NULL) {
+            free(root);
+            return NULL;
+        }
+
+        // Случай 2: узел с одним потомком
+        if (root->left == NULL) {
+            Node* temp = root->right;
+            free(root);
+            return temp;
+        }
+
+        if (root->right == NULL) {
+            Node* temp = root->left;
+            free(root);
+            return temp;
+        }
+
+        // Случай 3: узел с двумя потомками
+        Node* temp = findMin(root->right);
+        root->data = temp->data;
+        root->right = deleteNode(root->right, temp->data);
+    }
+
+    return root;
+}
+
+// Прямой обход (NLR)
+void preorder(Node* root) {
+    if (root != NULL) {
+        printf("%d ", root->data);
+        preorder(root->left);
+        preorder(root->right);
+    }
+}
+
+// Центрированный обход (LNR)
+void inorder(Node* root) {
+    if (root != NULL) {
+        inorder(root->left);
+        printf("%d ", root->data);
+        inorder(root->right);
+    }
+}
+
+// Обратный обход (LRN)
+void postorder(Node* root) {
+    if (root != NULL) {
+        postorder(root->left);
+        postorder(root->right);
+        printf("%d ", root->data);
+    }
+}
+
+// DFS — через inorder
+void dfs(Node* root) {
+    if (root != NULL) {
+        dfs(root->left);
+        printf("%d ", root->data);
+        dfs(root->right);
+    }
+}
+
+// Структура очереди для BFS
+typedef struct QueueNode {
+    Node* treeNode;
+    struct QueueNode* next;
+} QueueNode;
+
+typedef struct Queue {
+    QueueNode* front;
+    QueueNode* rear;
+} Queue;
+
+// Создание пустой очереди
+Queue* createQueue() {
+    Queue* q = (Queue*)malloc(sizeof(Queue));
+    if (q == NULL) {
+        printf("Ошибка выделения памяти для очереди!\n");
+        exit(1);
+    }
+
+    q->front = NULL;
+    q->rear = NULL;
+    return q;
+}
+
+// Проверка, пуста ли очередь
+int isEmptyQueue(Queue* q) {
+    return q->front == NULL;
+}
+
+// Добавление в очередь
+void enqueue(Queue* q, Node* treeNode) {
+    QueueNode* newQNode = (QueueNode*)malloc(sizeof(QueueNode));
+    if (newQNode == NULL) {
+        printf("Ошибка выделения памяти для элемента очереди!\n");
+        exit(1);
+    }
+
+    newQNode->treeNode = treeNode;
+    newQNode->next = NULL;
+
+    if (q->rear == NULL) {
+        q->front = q->rear = newQNode;
+        return;
+    }
+
+    q->rear->next = newQNode;
+    q->rear = newQNode;
+}
+
+// Удаление из очереди
+Node* dequeue(Queue* q) {
+    if (isEmptyQueue(q)) {
+        return NULL;
+    }
+
+    QueueNode* temp = q->front;
+    Node* treeNode = temp->treeNode;
+
+    q->front = q->front->next;
+
+    if (q->front == NULL) {
+        q->rear = NULL;
+    }
+
+    free(temp);
+    return treeNode;
+}
+
+// Обход в ширину BFS
+void bfs(Node* root) {
+    if (root == NULL) {
+        return;
+    }
+
+    Queue* q = createQueue();
+    enqueue(q, root);
+
+    while (!isEmptyQueue(q)) {
+        Node* current = dequeue(q);
+        printf("%d ", current->data);
+
+        if (current->left != NULL) {
+            enqueue(q, current->left);
+        }
+
+        if (current->right != NULL) {
+            enqueue(q, current->right);
+        }
+    }
+
+    free(q);
+}
+
+// Сохранение дерева в файл (симметричный обход)
+void saveTreeToFile(Node* root, FILE* file) {
+    if (root != NULL) {
+        saveTreeToFile(root->left, file);
+        fprintf(file, "%d ", root->data);
+        saveTreeToFile(root->right, file);
+    }
+}
+
+// Загрузка дерева из файла
+Node* loadTreeFromFile(Node* root, const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Ошибка открытия файла для чтения!\n");
+        return root;
+    }
+
+    int value;
+    while (fscanf(file, "%d", &value) == 1) {
+        root = insert(root, value);
+    }
+
+    fclose(file);
+    return root;
+}
+
+// Освобождение памяти дерева
+void freeTree(Node* root) {
+    if (root != NULL) {
+        freeTree(root->left);
+        freeTree(root->right);
+        free(root);
+    }
+}
+
+int main() {
+    Node* root = NULL;
+    Node* found;
+    Node* minNode;
+    Node* maxNode;
+
+    int n, value, key;
+    int choice;
+
+    do {
+        printf("\n===== МЕНЮ =====\n");
+        printf("1. Добавить элементы в дерево\n");
+        printf("2. Показать обходы дерева\n");
+        printf("3. Поиск элемента\n");
+        printf("4. Удаление элемента\n");
+        printf("5. Найти минимум и максимум\n");
+        printf("6. Вычислить высоту дерева\n");
+        printf("7. Сохранить дерево в файл\n");
+        printf("8. Загрузить дерево из файла\n");
+        printf("9. Полностью удалить дерево\n");
+        printf("0. Выход\n");
+        printf("Ваш выбор: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Введите количество элементов дерева: ");
+                scanf("%d", &n);
+
+                for (int i = 0; i < n; i++) {
+                    printf("Введите элемент %d: ", i + 1);
+                    scanf("%d", &value);
+                    root = insert(root, value);
+                }
+                break;
+
+            case 2:
+                if (root == NULL) {
+                    printf("Дерево пустое.\n");
+                } else {
+                    printf("\nПрямой обход (preorder, NLR): ");
+                    preorder(root);
+
+                    printf("\nЦентрированный обход (inorder, LNR): ");
+                    inorder(root);
+
+                    printf("\nОбратный обход (postorder, LRN): ");
+                    postorder(root);
+
+                    printf("\nDFS (в глубину): ");
+                    dfs(root);
+
+                    printf("\nBFS (в ширину): ");
+                    bfs(root);
+
+                    printf("\n");
+                }
+                break;
+
+            case 3:
+                printf("Введите ключ для поиска: ");
+                scanf("%d", &key);
+
+                found = search(root, key);
+                if (found != NULL) {
+                    printf("Элемент %d найден в дереве.\n", key);
+                } else {
+                    printf("Элемент %d не найден в дереве.\n", key);
+                }
+                break;
+
+            case 4:
+                printf("Введите ключ для удаления: ");
+                scanf("%d", &key);
+
+                if (search(root, key) != NULL) {
+                    root = deleteNode(root, key);
+                    printf("Элемент %d удален из дерева.\n", key);
+                } else {
+                    printf("Элемент %d не найден, удаление невозможно.\n", key);
+                }
+                break;
+
+            case 5:
+                if (root == NULL) {
+                    printf("Дерево пустое.\n");
+                } else {
+                    minNode = findMin(root);
+                    maxNode = findMax(root);
+
+                    printf("Минимальный элемент: %d\n", minNode->data);
+                    printf("Максимальный элемент: %d\n", maxNode->data);
+                }
+                break;
+
+            case 6:
+                printf("Высота дерева: %d\n", getHeight(root));
+                break;
+
+            case 7: {
+                FILE* file = fopen("tree.txt", "w");
+                if (file == NULL) {
+                    printf("Ошибка открытия файла для записи!\n");
+                } else {
+                    saveTreeToFile(root, file);
+                    fclose(file);
+                    printf("Дерево сохранено в файл tree.txt\n");
+                }
+                break;
+            }
+
+            case 8:
+                freeTree(root);
+                root = NULL;
+                root = loadTreeFromFile(root, "tree.txt");
+                printf("Дерево загружено из файла tree.txt\n");
+                break;
+
+            case 9:
+                freeTree(root);
+                root = NULL;
+                printf("Дерево полностью удалено.\n");
+                break;
+
+            case 0:
+                printf("Завершение программы.\n");
+                break;
+
+            default:
+                printf("Неверный выбор.\n");
+        }
+
+    } while (choice != 0);
+
+    freeTree(root);
+    return 0;
+}
+
